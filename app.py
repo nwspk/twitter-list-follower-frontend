@@ -1,6 +1,8 @@
 import os
 from flask import Flask, request, make_response, render_template, url_for, session
 import tweepy
+import boto3
+import json
 
 app = Flask(__name__)
 app.secret_key = "secret-key"
@@ -23,7 +25,6 @@ def follow_list(list_id: int):
     """
     if request.method == "POST":
         pass
-        # TODO: redirect to authentication flow
         auth = tweepy.OAuthHandler(os.environ.get('consumer_key'), os.environ.get('consumer_secret'), url_for('redirect'))
         session['request_token'] = auth.request_token
         return redirect(auth.get_authorization_url())
@@ -46,20 +47,17 @@ def redirect():
         verifier = request.args.get('oauth_verifier')
         auth.get_access_token(verifier)
 
-        api = tweepy.API(auth)
-        user_id = session.get('user_id')
-        db_.get_app_db().add_item(user_id)
-        db_.get_app_db().update_item(user_id, 'access_token', auth.access_token)
-        db_.get_app_db().update_item(user_id, 'access_token_secret', auth.access_token_secret)
+        package = {
+            'access_token': auth.access_token,
+            'access_token_secret': auth.access_token_secret,
+            'user_id': session['user_id'],
+            'list_id': session['list_id']
+        }
 
-        process_queue = queues()[2]
-        process_queue.send_message(MessageBody=user_id)
-
-        # enqueue_follows(*get_people_to_follow(api), twitter_api=api)
-        # this takes too long - needs to be queued
-    list_to_follow = request.cookies.get('list_id')
-    # TODO: pass list_to_follow with username
+        sqs_resource = boto3.resource('sqs')
+        queue = sqs_resource.get_queue_by_name(QueueName='process')
+        queue.send_message(MessageBody=json.dumps(package))
 
 
 if __name__ == '__main__':
-app.run()
+    app.run()
