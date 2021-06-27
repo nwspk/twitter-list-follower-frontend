@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block body_content %}
+<main class="px-3">
+    {% set list_id = 3 %}
+    <h1>Do you want to follow everyone on 'Twitterati'?</h1>
+{#    TODO: make call to Twitter API, pass through list name#}
+    <form action="" method="post">
+        <div class="form-group">
+          <label for="twitter-username" class="form-label">We'll need your twitter username</label>
+          <input type="text" name="twitter-username" class="form-control" id="twitter-username" placeholder="@twitterFamous">
+        </div>
+        <br>
+        <button type="submit" class="btn btn-primary">Submit</button>
+    </form>
+</main>
+{% endblock %}
