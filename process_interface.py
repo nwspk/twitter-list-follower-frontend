@@ -2,7 +2,7 @@ import abc
 import json
 import re
 import time
-
+import hashlib
 import boto3
 
 
@@ -25,7 +25,7 @@ class BaseInterface:
     @abc.abstractmethod
     def process(
         self, username: str, list_id: str, access_token: str, access_token_secret: str
-    ):
+    ) -> bool:
         raise NotImplementedError
 
     @property
@@ -38,7 +38,13 @@ class BaseInterface:
         raise NotImplementedError
 
 
-class AWSBaseInterface(BaseInterface):
+class AmazonHelpers:
+    @staticmethod
+    def check_hash(hex_digest_to_check: str, original_message: str) -> bool:
+        return hex_digest_to_check == hashlib.md5(original_message.encode()).hexdigest()
+
+
+class AWSBaseInterface(BaseInterface, AmazonHelpers):
     def __init__(self, db_url):
         super(AWSBaseInterface, self).__init__(db_url)
 
@@ -52,7 +58,8 @@ class AWSBaseInterface(BaseInterface):
         sqs_resource = boto3.resource("sqs")
         queue = sqs_resource.get_queue_by_name(QueueName="process")
         response = queue.send_message(MessageBody=package)
-        return response
+        message_sent = self.check_hash(response["MD5OfMessageBody"], package)
+        return message_sent
 
     @BaseInterface.db.setter
     def db(self, new_url: str):
@@ -62,15 +69,25 @@ class AWSBaseInterface(BaseInterface):
             raise Exception
 
 
-class TestBaseAPI(BaseInterface):
+class TestAWSAPI(BaseInterface):
     def __init__(self, url="test"):
-        super(TestBaseAPI, self).__init__(url)
+        super(TestAWSAPI, self).__init__(url)
 
     def process(
         self, username: str, list_id: str, access_token: str, access_token_secret: str
     ):
         time.sleep(4)
-        return 200
+        message_as_str = self.prepare_package(
+            username, list_id, access_token, access_token_secret
+        )
+        message_body_hash = hashlib.md5(message_as_str.encode()).hexdigest()
+        return {
+            "MD5OfMessageBody": message_body_hash,
+            "MD5OfMessageAttributes": "string",
+            "MD5OfMessageSystemAttributes": "string",
+            "MessageId": "string",
+            "SequenceNumber": "string",
+        }
 
     @BaseInterface.db.setter
     def db(self, new_url):
@@ -81,4 +98,4 @@ class ProcessInterfaceFactory:
     @classmethod
     def create_interface(cls, queue_tool):
         if queue_tool is None:
-            return TestBaseAPI()
+            return TestAWSAPI()
