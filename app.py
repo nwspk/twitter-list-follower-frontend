@@ -2,13 +2,12 @@ import os
 from flask import Flask, request, make_response, render_template, session, abort
 from flask import redirect as flask_redirect
 import tweepy
-from process_interface import ProcessInterfaceFactory
+from process_interface import ProcessInterfaceFactory, Interfaces
 
 app = Flask(__name__)
 app.secret_key = "secret-key"
-app.queue_interface = ProcessInterfaceFactory.create_interface(
-    os.environ.get("QUEUE_TOOL")
-)
+BACKEND = Interfaces[os.environ.get("QUEUE_TOOL")]
+app.queue_interface = ProcessInterfaceFactory.create_interface(BACKEND)
 
 
 @app.route("/", methods=["GET"])
@@ -28,8 +27,8 @@ def follow_list(list_id: int):
     if request.method == "POST":
         session["user_id"] = request.form.get("twitter-username")
         auth = tweepy.OAuthHandler(
-            os.environ.get("consumer_key"),
-            os.environ.get("consumer_secret"),
+            os.environ.get("CONSUMER_KEY"),
+            os.environ.get("CONSUMER_SECRET"),
             callback="http://127.0.0.1:5000/redirect",
         )
         auth_url = auth.get_authorization_url()
@@ -50,8 +49,8 @@ def redirect():
         del session["request_token"]
 
         auth = tweepy.OAuthHandler(
-            os.environ.get("consumer_key"),
-            os.environ.get("consumer_secret"),
+            os.environ.get("CONSUMER_KEY"),
+            os.environ.get("CONSUMER_SECRET"),
             callback="http://127.0.0.1:5000/redirect",
         )
         verifier = request.args.get("oauth_verifier")
