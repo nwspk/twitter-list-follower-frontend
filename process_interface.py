@@ -1,9 +1,9 @@
 import abc
 import json
-import re
 import time
 import hashlib
 import boto3
+from enum import Enum
 
 
 class BaseInterface:
@@ -28,25 +28,14 @@ class BaseInterface:
     ) -> bool:
         raise NotImplementedError
 
-    @property
-    def db(self):
-        return self._db
 
-    @db.setter
-    @abc.abstractmethod
-    def db(self, new_url: str):
-        raise NotImplementedError
+class AWSBaseInterface(BaseInterface):
+    def __init__(self, db_url):
+        super(AWSBaseInterface, self).__init__(db_url)
 
-
-class AmazonHelpers:
     @staticmethod
     def check_hash(hex_digest_to_check: str, original_message: str) -> bool:
         return hex_digest_to_check == hashlib.md5(original_message.encode()).hexdigest()
-
-
-class AWSBaseInterface(BaseInterface, AmazonHelpers):
-    def __init__(self, db_url):
-        super(AWSBaseInterface, self).__init__(db_url)
 
     def process(
         self, username: str, list_id: str, access_token: str, access_token_secret: str
@@ -60,13 +49,6 @@ class AWSBaseInterface(BaseInterface, AmazonHelpers):
         response = queue.send_message(MessageBody=package)
         message_sent = self.check_hash(response["MD5OfMessageBody"], package)
         return message_sent
-
-    @BaseInterface.db.setter
-    def db(self, new_url: str):
-        if re.match(r"aws", new_url):
-            self._db = new_url
-        else:
-            raise Exception
 
 
 class TestAWSAPI(BaseInterface):
@@ -89,13 +71,15 @@ class TestAWSAPI(BaseInterface):
             "SequenceNumber": "string",
         }
 
-    @BaseInterface.db.setter
-    def db(self, new_url):
-        self._db = new_url
+
+class Interfaces(Enum):
+    AWS = 1
+    TEST_AWS = 2
 
 
 class ProcessInterfaceFactory:
+    interfaces = {Interfaces.AWS: AWSBaseInterface, Interfaces.TEST_AWS: TestAWSAPI}
+
     @classmethod
-    def create_interface(cls, queue_tool):
-        if queue_tool is None:
-            return TestAWSAPI()
+    def create_interface(cls, queue_tool: Interfaces):
+        return ProcessInterfaceFactory.interfaces.get(queue_tool)
