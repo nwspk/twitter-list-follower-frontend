@@ -68,7 +68,7 @@ def redirect():
             auth.access_token_secret,
         )
 
-        return "We'll now process the request"
+        return flask_redirect(f"https://twitter.com/i/lists/{session['list_id']}")
 
 
 if __name__ == "__main__":
