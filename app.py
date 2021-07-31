@@ -6,7 +6,7 @@ from process_interface import ProcessInterfaceFactory, Interfaces
 import secrets
 
 BACKEND = Interfaces[os.environ.get("QUEUE_TOOL")]
-TWITTER_CALLBACK_URL = os.environ.get("CALLBACK_URL")
+TWITTER_CALLBACK_URL = os.environ.get("CALLBACK_URL", "http://127.0.0.1:5000/redirect")
 
 app = Flask(__name__)
 app.secret_key = secrets.token_bytes(24)
@@ -32,7 +32,7 @@ def follow_list(list_id: int):
         auth = tweepy.OAuthHandler(
             os.environ.get("CONSUMER_KEY"),
             os.environ.get("CONSUMER_SECRET"),
-            callback="http://127.0.0.1:5000/redirect",
+            callback=TWITTER_CALLBACK_URL,
         )
         auth_url = auth.get_authorization_url()
         session["request_token"] = auth.request_token.get("oauth_token", None)
@@ -54,7 +54,7 @@ def redirect():
         auth = tweepy.OAuthHandler(
             os.environ.get("CONSUMER_KEY"),
             os.environ.get("CONSUMER_SECRET"),
-            callback="http://127.0.0.1:5000/redirect",
+            callback=TWITTER_CALLBACK_URL,
         )
         verifier = request.args.get("oauth_verifier")
 
