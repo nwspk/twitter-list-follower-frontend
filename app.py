@@ -3,10 +3,13 @@ from flask import Flask, request, make_response, render_template, session, abort
 from flask import redirect as flask_redirect
 import tweepy
 from process_interface import ProcessInterfaceFactory, Interfaces
+import secrets
+
+BACKEND = Interfaces[os.environ.get("QUEUE_TOOL")]
+TWITTER_CALLBACK_URL = os.environ.get("CALLBACK_URL")
 
 app = Flask(__name__)
-app.secret_key = "secret-key"
-BACKEND = Interfaces[os.environ.get("QUEUE_TOOL")]
+app.secret_key = secrets.token_bytes(24)
 app.queue_interface = ProcessInterfaceFactory.create_interface(BACKEND)
 
 
