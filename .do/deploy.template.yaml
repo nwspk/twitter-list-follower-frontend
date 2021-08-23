@@ -1,0 +1,17 @@
+spec:
+  name: twitter-follower-frontend
+  services:
+  - name: web
+    git:
+      branch: main
+      repo_clone_url: https://github.com/nwspk/twitter-list-follower-frontend.git
+    envs:
+    - key: QUEUE_TOOL
+      value: "AWS_TEST"
+    - key: AWS_ACCESS_KEY
+      value: "AWS_ACCESS_KEY"
+    - key: AWS_SECRET_ACCESS_KEY
+      value: "SECRET_AWS_KEY"
+      type: SECRET
+    - key: TWITTER_CALLBACK_URL
+      value: "http://127.0.0.1:5000/redirect"
